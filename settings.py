@@ -16,18 +16,18 @@ LOG_PATH = "../logs/runtime{time:YYYY-MM-DD}.log"
 
 # redis
 REDIS_CONN = {
-    "host": "192.168.1.10",
-    "port": 21579,
-    "pass": "jotrin@20211002#",
-    "db": 14
+    "host": "",
+    "port": 1,
+    "pass": "",
+    "db": 1
 }
 
 # mongo
 MONGO_CONN = {
-    "host": "192.168.1.10",
-    "port": 27017,
-    "username": "jotrin",
-    "password": "jotrin@20211002#",
+    "host": "",
+    "port": 1,
+    "username": "",
+    "password": "",
 }
 
 
