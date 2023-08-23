@@ -28,9 +28,9 @@ class AioEngine(AioConfig, AioTask):
 
             self.logger.debug(f"[Add queue]>> {task}")
             await self._q.put(task)
-
-        for _ in range(TASK_SIZE):
-            await self._q.put(None)
+        else:
+            for _ in range(TASK_SIZE):
+                await self._q.put(None)
 
     async def do_tasks(self):
         """
