@@ -32,14 +32,16 @@ class AioEngine(AioConfig, AioTask):
         :return:
         """
 
-        async for task in aiter(self.publish_tasks()):
-            if task is None:
-                continue
-            
+        try:
+            async for task in aiter(self.publish_tasks()):
+                if task is None:
+                    continue
 
-            self.logger.debug(f"[Add queue]>> {task}")             
-            await self._q.put(task)
-        else:
+                self.logger.debug(f"[Add queue]>> {task}")
+                await self._q.put(task)
+        except Exception as e:
+            self.logger.error(f"[Error]>> add_tasks - {e}")
+        finally:
             for _ in range(TASK_SIZE):
                 await self._q.put(None)
 
@@ -60,7 +62,7 @@ class AioEngine(AioConfig, AioTask):
                     self.logger.debug(f"[Out queue]>> {task}")
                     await self.process(task)
             except Exception as e:
-                self.logger.error(f"[error]>> {task} - {e}")
+                self.logger.error(f"[Error]>> do_tasks - {e}\n{task}")
             finally:
                 self._q.task_done()
 
@@ -172,7 +174,8 @@ class AioEngine(AioConfig, AioTask):
         import cProfile, pstats, io
 
         with cProfile.Profile() as pr:
-            # 启动异步程序
+
+            # 异步程序启动
             self.logger.info(f"[Task start]>> ...")
             self._loop.run_until_complete(self.run_task())
             self.logger.info(f"[Task end]>> ...")
@@ -210,8 +213,8 @@ if __name__ == '__main__':
             self.logger.success(task_future)
             await asyncio.sleep(0.2)
 
-    t = T()
-    t.run()
+    # t = T()
+    # t.run()
 
 
 
