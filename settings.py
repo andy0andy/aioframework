@@ -1,10 +1,10 @@
-import sys
+import sys, os
 
 # 多链式任务数
-TASK_SIZE = 10
+TASK_SIZE = os.cpu_count() * 10
 
 # 并发量
-SEMAPHORE = 10
+SEMAPHORE = 100
 
 # 队列大小
 QUEUE_SIZE = 5000

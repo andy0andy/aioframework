@@ -1,8 +1,16 @@
 import asyncio
 from typing import *
 
-from task import AioTask
-from config import AioConfig
+import sys, os
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
+try:
+    from task import AioTask
+    from config import AioConfig
+except:
+    from core.task import AioTask
+    from core.config import AioConfig
+
 from settings import *
 
 
@@ -11,9 +19,10 @@ class AioEngine(AioConfig, AioTask):
     def __init__(self, *args):
         super().__init__(*args)
 
-        self._q = asyncio.Queue(QUEUE_SIZE)
+        self._q = asyncio.Queue()
         self._loop = asyncio.new_event_loop()
         self._sem = asyncio.Semaphore(SEMAPHORE)
+        self._lock = asyncio.Lock()
 
     async def add_tasks(self):
         """
@@ -26,8 +35,14 @@ class AioEngine(AioConfig, AioTask):
             if task is None:
                 continue
 
-            self.logger.debug(f"[Add queue]>> {task}")
-            await self._q.put(task)
+            # 控制队列大小
+            while True:
+                if self._q.qsize() + 1 == QUEUE_SIZE:
+                    await asyncio.sleep(0.1)
+                else:
+                    self.logger.debug(f"[Add queue]>> {task}")
+                    await self._q.put(task)
+                    break
         else:
             for _ in range(TASK_SIZE):
                 await self._q.put(None)
@@ -48,7 +63,8 @@ class AioEngine(AioConfig, AioTask):
                 async with self._sem:
                     self.logger.debug(f"[Out queue]>> {task}")
                     await self.process(task)
-
+            except Exception as e:
+                self.logger.error(f"[error]>> {task} - {e}")
             finally:
                 self._q.task_done()
 
@@ -65,6 +81,9 @@ class AioEngine(AioConfig, AioTask):
         await asyncio.wait(task_list)
 
         await self._q.join()
+
+
+
 
     def run(self):
         """
@@ -123,7 +142,7 @@ class AioEngine(AioConfig, AioTask):
 
                 line = line.split()
                 perfor = {
-                    "ncalls": int(line[0]),
+                    "ncalls": line[0],
                     "tottime": float(line[1]),
                     "percall": float(line[2]),
                     "cumtime": float(line[3]),
@@ -142,7 +161,7 @@ class AioEngine(AioConfig, AioTask):
                 if perfor["func_info"].startswith("{") and perfor["func_info"].endswith("}"):
                     continue
 
-                l = "{:^4d}{cumtime:^10.3f} {ncalls:^10d} {percall1:^10.3f}  {func_info}\n".format(c, **perfor)
+                l = "{:^4d}{cumtime:^10.3f} {ncalls:^10s} {percall1:^10.3f}  {func_info}\n".format(c, **perfor)
                 s += l
                 if c + 1 == show_len:
                     s += "  ...\n\n"
@@ -157,8 +176,7 @@ class AioEngine(AioConfig, AioTask):
         import cProfile, pstats, io
 
         with cProfile.Profile() as pr:
-
-            # 启动代码
+            # 启动异步程序
             self.logger.info(f"[Task start]>> ...")
             self._loop.run_until_complete(self.run_task())
             self.logger.info(f"[Task end]>> ...")
@@ -170,29 +188,36 @@ class AioEngine(AioConfig, AioTask):
             [_, s] = process_performance(sio.getvalue())
             self.logger.info("性能统计：\n" + s)
 
+
+
 if __name__ == '__main__':
     # 例子
 
-    # urls = [
-    #     "https://cn.element14.com/texas-instruments/ads7924irter/adc-octal-sar-12bit-100ksps-wqfn/dp/2782707RL?st=ads7924irter",
-    #     "https://cn.element14.com/phoenix-contact/3006043/terminal-block-din-rail-2pos/dp/3042960",
-    #     "https://cn.element14.com/power-integrations/lnk3604p/off-line-switcher-ic-flyback-dip/dp/2951378",
-    #     "https://cn.element14.com/stmicroelectronics/stth1602ct/diode-ultrafast-2x8a/dp/9935878",
-    #     "https://cn.element14.com/onsemi/es2d/diode-fast-2a-200v-smd-do-214/dp/1467491",
-    # ]
-    #
-    # class T(AioEngine):
-    #
-    #     async def publish_tasks(self):
-    #         for url in urls * 100:
-    #             yield url
-    #             # await asyncio.sleep(0.5)
-    #
-    #     async def process(self, task_future: Any):
-    #         self.logger.success(task_future)
-    #
+    urls = [
+        "https://cn.element14.com/texas-instruments/ads7924irter/adc-octal-sar-12bit-100ksps-wqfn/dp/2782707RL?st=ads7924irter",
+        "https://cn.element14.com/phoenix-contact/3006043/terminal-block-din-rail-2pos/dp/3042960",
+        "https://cn.element14.com/power-integrations/lnk3604p/off-line-switcher-ic-flyback-dip/dp/2951378",
+        "https://cn.element14.com/stmicroelectronics/stth1602ct/diode-ultrafast-2x8a/dp/9935878",
+        "https://cn.element14.com/onsemi/es2d/diode-fast-2a-200v-smd-do-214/dp/1467491",
+    ]
+
+    class T(AioEngine):
+
+        async def publish_tasks(self):
+
+            for url in urls * 10:
+
+                yield url
+                await asyncio.sleep(0.1)
+
+        async def process(self, task_future: Any):
+            self.logger.success(task_future)
+            await asyncio.sleep(0.2)
+
     # t = T()
     # t.run()
+
+
 
     # ===============
     ...
