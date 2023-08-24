@@ -19,7 +19,7 @@ class AioEngine(AioConfig, AioTask):
     def __init__(self, *args):
         super().__init__(*args)
 
-        self._q = asyncio.Queue()
+        self._q = asyncio.Queue(maxsize=QUEUE_SIZE)
         self._loop = asyncio.new_event_loop()
         self._sem = asyncio.Semaphore(SEMAPHORE)
         self._lock = asyncio.Lock()
@@ -34,15 +34,10 @@ class AioEngine(AioConfig, AioTask):
         async for task in aiter(self.publish_tasks()):
             if task is None:
                 continue
+            
 
-            # 控制队列大小
-            while True:
-                if self._q.qsize() + 1 == QUEUE_SIZE:
-                    await asyncio.sleep(0.1)
-                else:
-                    self.logger.debug(f"[Add queue]>> {task}")
-                    await self._q.put(task)
-                    break
+            self.logger.debug(f"[Add queue]>> {task}")             
+            await self._q.put(task)
         else:
             for _ in range(TASK_SIZE):
                 await self._q.put(None)
@@ -214,8 +209,8 @@ if __name__ == '__main__':
             self.logger.success(task_future)
             await asyncio.sleep(0.2)
 
-    # t = T()
-    # t.run()
+    t = T()
+    t.run()
 
 
 
