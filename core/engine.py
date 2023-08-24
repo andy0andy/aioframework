@@ -21,6 +21,7 @@ class AioEngine(AioConfig, AioTask):
 
         self._q = asyncio.Queue(maxsize=QUEUE_SIZE)
         self._loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self._loop)
         self._sem = asyncio.Semaphore(SEMAPHORE)
         self._lock = asyncio.Lock()
 
