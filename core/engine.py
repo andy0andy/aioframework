@@ -37,7 +37,7 @@ class AioEngine(AioConfig, AioTask):
                 if task is None:
                     continue
 
-                self.logger.debug(f"[Add queue]>> {task}")
+                self.logger.debug(f"[Add queue]>> {str(task)[:100]+'...' if len(str(task))>100 else task}")
                 await self._q.put(task)
         except Exception as e:
             self.logger.error(f"[Error]>> add_tasks - {e}")
@@ -59,7 +59,7 @@ class AioEngine(AioConfig, AioTask):
 
                 # 开始处理任务
                 async with self._sem:
-                    self.logger.debug(f"[Out queue]>> {task}")
+                    self.logger.debug(f"[Out queue]>> {str(task)[:100]+'...' if len(str(task))>100 else task}")
                     await self.process(task)
             except Exception as e:
                 self.logger.error(f"[Error]>> do_tasks - {e}\n{task}")
