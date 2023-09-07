@@ -1,4 +1,4 @@
 .idea
 __pycache__
-caches/*
-logs/*
+caches/
+logs/
