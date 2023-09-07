@@ -6,8 +6,11 @@ from urllib.parse import quote_plus
 from settings import *
 
 class AioConfig(object):
+    """
+    配置以及一些方
+    """
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         self.config_logger()
 
         self.logger.debug(f"[Connect DB]>> ...")
@@ -16,6 +19,7 @@ class AioConfig(object):
         self.connect_mongo()
 
         self.logger.debug(f"[Init Over]>> ...")
+
 
     def config_logger(self):
         """

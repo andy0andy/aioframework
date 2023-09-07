@@ -1,3 +1,4 @@
 aredis
 motor
 loguru
+bloompy

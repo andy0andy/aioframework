@@ -8,7 +8,7 @@ from typing import *
 
 class AioTask(object):
 
-    async def publish_tasks(self) -> AsyncIterator:
+    async def publish_tasks(self):
         """
         发布任务
         yield返回任务，再调用异步迭代器
