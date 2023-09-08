@@ -194,9 +194,11 @@ class AioEngine(AioConfig, AioTask):
         with cProfile.Profile() as pr:
 
             # 异步程序启动
+            self._loop.run_until_complete(self.start_run())
             self.logger.info(f"[Task start]>> ...")
             self._loop.run_until_complete(self.run_task())
             self.logger.info(f"[Task end]>> ...")
+            self._loop.run_until_complete(self.end_run())
 
             # 收尾操作
             if self.is_dup and self.offline_filter:

@@ -31,3 +31,16 @@ class AioTask(object):
         """
 
         await asyncio.ensure_future(func(*args))
+
+    async def start_run(self):
+        """
+        开始执行任务前一步
+        :return:
+        """
+
+
+    async def end_run(self):
+        """
+        开始执行任务前一步
+        :return:
+        """

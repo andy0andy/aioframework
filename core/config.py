@@ -46,7 +46,7 @@ class AioConfig(object):
         :return:
         """
 
-        conn_str = f"mongodb://{MONGO_CONN['username']}:{MONGO_CONN['password']}@{MONGO_CONN['host']}:{MONGO_CONN['port']}"
-        self.mongo_obj = motor_asyncio.AsyncIOMotorClient(quote_plus(conn_str))
+        conn_str = f"mongodb://{MONGO_CONN['username']}:{quote_plus(MONGO_CONN['password'])}@{MONGO_CONN['host']}:{MONGO_CONN['port']}"
+        self.mongo_obj = motor_asyncio.AsyncIOMotorClient(conn_str)
         self.logger.debug(f"[mongo]>> connect mongo {MONGO_CONN['host']}:{MONGO_CONN['port']}")
 
