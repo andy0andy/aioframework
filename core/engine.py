@@ -1,6 +1,5 @@
 import asyncio
 from typing import *
-import bloompy
 
 import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
@@ -27,20 +26,6 @@ class AioEngine(AioConfig, AioTask):
 
         # 参数 初始化
 
-        self.is_dup = kwargs.get('is_dup', False)   # 是否去重
-        self.offline_filter = kwargs.get('offline_filter', False)     # 是否保存离线过滤器
-
-        if self.is_dup:
-            """
-            参考：https://cloud.tencent.com/developer/article/1564809
-            计数扩容布隆过滤器
-            """
-
-            offline_filter_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), f"caches/{self.__class__.__name__}.suffix")
-            if os.path.exists(offline_filter_path):
-                self.filter = bloompy.get_filter_fromfile(offline_filter_path)
-            else:
-                self.filter = bloompy.SCBloomFilter()
 
 
     async def add_tasks(self):
@@ -194,21 +179,13 @@ class AioEngine(AioConfig, AioTask):
         with cProfile.Profile() as pr:
 
             # 异步程序启动
-            self._loop.run_until_complete(self.start_run())
             self.logger.info(f"[Task start]>> ...")
+
+            self._loop.run_until_complete(self.start_run())
             self._loop.run_until_complete(self.run_task())
-            self.logger.info(f"[Task end]>> ...")
             self._loop.run_until_complete(self.end_run())
 
-            # 收尾操作
-            if self.is_dup and self.offline_filter:
-                # 保存本地去重文件
-                offline_filter_path = os.path.join(os.path.dirname(os.path.dirname(__file__)),
-                                                   f"caches/{self.__class__.__name__}.suffix")
-                if os.path.exists(offline_filter_path):
-                    os.remove(offline_filter_path)
-
-                self.filter.tofile(offline_filter_path)
+            self.logger.info(f"[Task end]>> ...")
 
             sio = io.StringIO()
             ps = pstats.Stats(pr, stream=sio).sort_stats("cumtime")
@@ -230,13 +207,16 @@ if __name__ == '__main__':
         "https://cn.element14.com/onsemi/es2d/diode-fast-2a-200v-smd-do-214/dp/1467491",
     ]
 
-    class T(AioEngine):
+    class Test(AioEngine):
 
         async def publish_tasks(self):
 
-            for url in urls * 10:
+            for url in urls * 2:
 
-                if not self.filter.add(url):
+                is_ex = await self.filter.is_exist(url)
+                if not is_ex:
+                    await self.filter.add(url)
+
                     yield url
                     await asyncio.sleep(0.1)
 
@@ -244,9 +224,8 @@ if __name__ == '__main__':
             self.logger.success(task_future)
             await asyncio.sleep(0.2)
 
-    t = T(is_dup=True, offline_filter=True)
+    t = Test(is_dup=True)
     t.run()
-
 
 
     # ===============

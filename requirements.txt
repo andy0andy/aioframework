@@ -1,4 +1,4 @@
-aredis
+aioredis
 motor
 loguru
 bloompy
