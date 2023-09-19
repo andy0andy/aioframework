@@ -6,6 +6,17 @@ from typing import *
 """
 
 
+
+class FunctionCall(object):
+    """
+    函数调用
+    """
+
+    callback: Callable
+    args: Tuple
+    kwargs: Dict
+
+
 class AioTask(object):
 
     async def publish_tasks(self):
@@ -22,15 +33,22 @@ class AioTask(object):
         :return:
         """
 
-    async def next_process(self, func: Callable, *args: Any):
+    def yield_step(self, callback: Callable, *args, **kwargs):
         """
         异步链 下一步
-        :param func:
+        用以生成 一个对象 传给异步队列调度
+        :param callback:
         :param args:
+        :param kwargs:
         :return:
         """
 
-        await asyncio.ensure_future(func(*args))
+        fc = FunctionCall()
+        fc.callback = callback
+        fc.args = args
+        fc.kwargs = kwargs
+
+        return fc
 
     async def start_run(self):
         """

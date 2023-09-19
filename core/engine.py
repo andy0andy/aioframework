@@ -1,17 +1,18 @@
 import asyncio
 from typing import *
 
-import sys, os
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-
 try:
-    from task import AioTask
+    from task import AioTask, FunctionCall
     from config import AioConfig
+    from utils.queues import AioQueue
 except:
-    from core.task import AioTask
+    from core.task import AioTask, FunctionCall
     from core.config import AioConfig
+    from core.utils.queues import AioQueue
 
 from settings import *
+
+
 
 
 class AioEngine(AioConfig, AioTask):
@@ -19,13 +20,12 @@ class AioEngine(AioConfig, AioTask):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._q = asyncio.Queue(maxsize=QUEUE_SIZE)
+        self._q = AioQueue(maxsize=QUEUE_SIZE)
         self._loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self._loop)
         self._sem = asyncio.Semaphore(SEMAPHORE)
 
         # 参数 初始化
-
 
 
     async def add_tasks(self):
@@ -41,7 +41,8 @@ class AioEngine(AioConfig, AioTask):
                     continue
 
                 self.logger.debug(f"[Add queue]>> {str(task)[:100]+'...' if len(str(task))>100 else task}")
-                await self._q.put(task)
+                func_call = self.yield_step(self.process, task)
+                await self._q.put(func_call)
         except Exception as e:
             self.logger.error(f"[Error]>> add_tasks - {e}")
         finally:
@@ -55,17 +56,33 @@ class AioEngine(AioConfig, AioTask):
         """
 
         while True:
-            task = await self._q.get()
+            func_call = await self._q.get()
             try:
-                if task is None:
+                if func_call is None:
                     break
 
                 # 开始处理任务
                 async with self._sem:
-                    self.logger.debug(f"[Out queue]>> {str(task)[:100]+'...' if len(str(task))>100 else task}")
-                    await self.process(task)
+
+                    if isinstance(func_call, FunctionCall):
+
+                        coroutine_obj = func_call.callback(*func_call.args, **func_call.kwargs)
+                        if hasattr(coroutine_obj, "__aiter__") and hasattr(coroutine_obj, "__anext__"):  # 判断是否是异步迭代对象
+                            async for next_func_call in aiter(coroutine_obj):
+
+                                log_str = f"[Add queue]>> Next step:\n\tCallback name: {next_func_call.callback.__name__}\n\tArgs: {next_func_call.args}\n\tKwargs: {next_func_call.kwargs}"
+                                self.logger.debug(log_str)
+
+                                await self._q.put_left(next_func_call)
+                        else:
+                            log_str = f"[Out queue]>> \n\tCallback name: {func_call.callback.__name__}\n\tArgs: {func_call.args}\n\tKwargs: {func_call.kwargs}"
+                            self.logger.debug(log_str)
+
+                            await coroutine_obj
+
             except Exception as e:
-                self.logger.error(f"[Error]>> do_tasks - {e}\n{task}")
+                log_str = f"[Error]>> do_tasks - {e}\n\tCallback name: {func_call.callback.__name__}\n\tArgs: {func_call.args}\n\tKwargs: {func_call.kwargs}"
+                self.logger.error(log_str)
             finally:
                 self._q.task_done()
 
@@ -82,9 +99,6 @@ class AioEngine(AioConfig, AioTask):
         await asyncio.wait(task_list)
 
         await self._q.join()
-
-
-
 
     def run(self):
         """
@@ -196,37 +210,3 @@ class AioEngine(AioConfig, AioTask):
 
 
 
-if __name__ == '__main__':
-    # 例子
-
-    urls = [
-        "https://cn.element14.com/texas-instruments/ads7924irter/adc-octal-sar-12bit-100ksps-wqfn/dp/2782707RL?st=ads7924irter",
-        "https://cn.element14.com/phoenix-contact/3006043/terminal-block-din-rail-2pos/dp/3042960",
-        "https://cn.element14.com/power-integrations/lnk3604p/off-line-switcher-ic-flyback-dip/dp/2951378",
-        "https://cn.element14.com/stmicroelectronics/stth1602ct/diode-ultrafast-2x8a/dp/9935878",
-        "https://cn.element14.com/onsemi/es2d/diode-fast-2a-200v-smd-do-214/dp/1467491",
-    ]
-
-    class Test(AioEngine):
-
-        async def publish_tasks(self):
-
-            for url in urls * 2:
-
-                is_ex = await self.filter.is_exist(url)
-                if not is_ex:
-                    await self.filter.add(url)
-
-                    yield url
-                    await asyncio.sleep(0.1)
-
-        async def process(self, task_future: Any):
-            self.logger.success(task_future)
-            await asyncio.sleep(0.2)
-
-    t = Test(is_dup=True)
-    t.run()
-
-
-    # ===============
-    ...

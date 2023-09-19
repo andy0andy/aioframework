@@ -3,8 +3,12 @@ from motor import motor_asyncio
 from loguru import logger
 from urllib.parse import quote_plus
 
-from settings import *
-from utils.bloom_filter import AioBloomFilter
+try:
+    from settings import *
+    from utils.bloom_filter import AioBloomFilter
+except:
+    from settings import *
+    from core.utils.bloom_filter import AioBloomFilter
 
 class AioConfig(object):
     """
