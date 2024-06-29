@@ -24,6 +24,7 @@ class AioEngine(AioConfig, AioTask):
         self._loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self._loop)
         self._sem = asyncio.Semaphore(SEMAPHORE)
+        self.lock = asyncio.Lock()
 
         # 参数 初始化
 
@@ -44,7 +45,7 @@ class AioEngine(AioConfig, AioTask):
                 func_call = self.yield_step(self.process, task)
                 await self._q.put(func_call)
         except Exception as e:
-            self.logger.error(f"[Error]>> add_tasks - {e}")
+            self.logger.exception(f"[Error]>> add_tasks - {e}")
         finally:
             for _ in range(TASK_SIZE):
                 await self._q.put(None)
@@ -70,19 +71,19 @@ class AioEngine(AioConfig, AioTask):
                         if hasattr(coroutine_obj, "__aiter__") and hasattr(coroutine_obj, "__anext__"):  # 判断是否是异步迭代对象
                             async for next_func_call in aiter(coroutine_obj):
 
-                                log_str = f"[Add queue]>> Next step:\n\tCallback name: {next_func_call.callback.__name__}\n\tArgs: {next_func_call.args}\n\tKwargs: {next_func_call.kwargs}"
+                                log_str = f"[Add queue]>> Next step:\n\tCallback name: {next_func_call.callback.__name__}\n\tArgs: {str(func_call.args)[:100]}\n\tKwargs: {str(func_call.kwargs)[:100]}"
                                 self.logger.debug(log_str)
 
                                 await self._q.put_left(next_func_call)
                         else:
-                            log_str = f"[Out queue]>> \n\tCallback name: {func_call.callback.__name__}\n\tArgs: {func_call.args}\n\tKwargs: {func_call.kwargs}"
+                            log_str = f"[Out queue]>> \n\tCallback name: {func_call.callback.__name__}\n\tArgs: {str(func_call.args)[:100]}\n\tKwargs: {str(func_call.kwargs)[:100]}"
                             self.logger.debug(log_str)
 
                             await coroutine_obj
 
             except Exception as e:
-                log_str = f"[Error]>> do_tasks - {e}\n\tCallback name: {func_call.callback.__name__}\n\tArgs: {func_call.args}\n\tKwargs: {func_call.kwargs}"
-                self.logger.error(log_str)
+                log_str = f"[Error]>> do_tasks - {e}\n\tCallback name: {func_call.callback.__name__}\n\tArgs: {str(func_call.args)[:100]}\n\tKwargs: {str(func_call.kwargs)[:100]}"
+                self.logger.exception(log_str)
             finally:
                 self._q.task_done()
 

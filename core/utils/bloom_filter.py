@@ -36,6 +36,12 @@ class AioBloomFilter(object):
             await self._redis.setbit(self.key, hash, 1)
 
     async def is_exist(self, value):
+        """
+
+        :param value:
+        :return: True: 已存在; False: 未存在
+        """
+
         hashs = self.get_hashs(value)
         exist = True
         for hash in hashs:
@@ -53,4 +59,6 @@ class AioBloomFilter(object):
         return hashs
 
 
-h = AioBloomFilter().get_hashs("111")
+
+
+

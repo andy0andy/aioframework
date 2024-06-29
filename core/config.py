@@ -12,7 +12,7 @@ except:
 
 class AioConfig(object):
     """
-    配置以及一些方
+    配置以及一些方法
     """
 
     def __init__(self, *args, **kwargs):
@@ -71,3 +71,4 @@ class AioConfig(object):
         conn_str = f"mongodb://{MONGO_CONN['username']}:{quote_plus(MONGO_CONN['password'])}@{MONGO_CONN['host']}:{MONGO_CONN['port']}"
         self.mongo_obj = motor_asyncio.AsyncIOMotorClient(conn_str)
         self.logger.debug(f"[mongo]>> connect mongo {MONGO_CONN['host']}:{MONGO_CONN['port']}")
+

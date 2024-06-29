@@ -1,4 +1,3 @@
-import asyncio
 from typing import *
 
 """
@@ -62,3 +61,4 @@ class AioTask(object):
         开始执行任务前一步
         :return:
         """
+
